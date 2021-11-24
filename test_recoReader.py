@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Simple unit test
@@ -41,7 +41,7 @@ def test_process():
     assert search["geo"] == "I"
     assert search["OnD"] == "PAR-LIS"
     assert search["OnD_distance"] == 1447
-    assert search["passengers"] == [{'passenger__type': 'ADT', 'passenger_nb': 2}]
+    assert search["passengers"] == [{'passenger_type': 'ADT', 'passenger_nb': 2}]
     assert len(search["recos"]) == 60
 
     # look at first reco

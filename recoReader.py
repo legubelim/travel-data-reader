@@ -15,20 +15,18 @@ import json
 import datetime
 import neobase
 import os
+import time
 from collections import Counter
 
 
-
 _RECO_LAYOUT = ["version_nb", "search_id", "search_country",
-                "search_date", "search_time", "origin_city", "destination_city", "request_dep_date", 
-	        "request_return_date", "passengers_string", 
-	        "currency", "price", "taxes", "fees", "nb_of_flights"]
+                "search_date", "search_time", "origin_city", "destination_city", "request_dep_date",
+                "request_return_date", "passengers_string",
+                "currency", "price", "taxes", "fees", "nb_of_flights"]
 
 _FLIGHT_LAYOUT = ["dep_airport", "dep_date", "dep_time",
                   "arr_airport", "arr_date", "arr_time",
-                  "operating_airline", "marketing_airline", "flight_nb", 
-	          "cabin"]
-
+                  "operating_airline", "marketing_airline", "flight_nb", "cabin"]
 
 # Log init
 logging.basicConfig(format='%(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
@@ -38,10 +36,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-### geography module ###
+# geography module
 neob = None 
 def get_neob():
-    """ Init geography module if necessary"""
+    """
+    Inits geography module if necessary
+    :return: neob: neobase object to be used for geo conversions
+    """
     global neob
     # geography module init
     if neob is None:
@@ -50,11 +51,12 @@ def get_neob():
     return neob
 
 
-### Currency rates ###
+# Currency rates
 def load_rates(rates_file):
     """
     Decodes currency rate file as provided by the BCE from https://www.ecb.europa.eu/stats/eurofxref/eurofxref.zip
-
+    :param: rates_file: name of the rates CSV file
+    :return: rates: dict currency code -> rate
     """
     
     header = None
@@ -82,11 +84,12 @@ def load_rates(rates_file):
     return rates
 
 
-### CSV decoding ###
+# CSV decoding
 def decode_line(line):
     """
     Decodes a CSV line based on _RECO_LAYOUT and _FLIGHT_LAYOUT
-
+    :param line: string containing a CSV line
+    :return reco: dict with decoded CSV fields
     """
     
     try:
@@ -121,26 +124,29 @@ def decode_line(line):
     return reco
     
 
-### Reco processing ###
-
+# Reco processing
 _SEARCH_FIELDS = ["version_nb", "search_id", "search_country",
-                  "search_date", "search_time", "origin_city", "destination_city", "request_dep_date", 
-	          "request_return_date", "passengers_string", 
-	          "currency"]
+                  "search_date", "search_time", "origin_city", "destination_city", "request_dep_date",
+                  "request_return_date", "passengers_string", "currency"]
+
 
 def group_and_decorate(recos_in, rates):
     """
     Groups recos to build a search object. Adds interesting fields.
-
+    :param recos_in: set of dict (decoded travel recommendations belonging to the same search)
+    :return search: decorated dict describing a search
     """
     
     # don't decorate empty search or empty recos
-    if recos_in == None or len(recos_in) == 0: return None
-    recos = [reco for reco in recos_in if reco != None]
+    if recos_in is None or len(recos_in) == 0:
+        return None
+    recos = [reco for reco in recos_in if reco is not None]
     
     def to_euros(amount):
-        if search["currency"] == "EUR": return amount
-        else: return round(amount / rates[search["currency"]], 2)
+        if search["currency"] == "EUR":
+            return amount
+        else:
+            return round(amount / rates[search["currency"]], 2)
 
     try:
         # some fields are common to the search, others are specific to recos
@@ -152,7 +158,7 @@ def group_and_decorate(recos_in, rates):
         # advance purchase & stay duration & OW/RT
         search_date = datetime.datetime.strptime(search["search_date"],'%Y-%m-%d')
         request_dep_date = datetime.datetime.strptime(search["request_dep_date"],'%Y-%m-%d')
-        # approximative since the dep date is local to the origin city (whereas the search date is UTC)
+        # approximate since the dep date is local to the origin city (whereas the search date is UTC)
         search["advance_purchase"] = (request_dep_date - search_date).days
         if search["request_return_date"] == "":
             search["stay_duration"] = -1
@@ -167,7 +173,7 @@ def group_and_decorate(recos_in, rates):
         passengers = []
         for pax_string in search['passengers_string'].rstrip().split(','):
             pax_array = pax_string.split("=")
-            passengers.append({"passenger__type" : pax_array[0], "passenger_nb" : int(pax_array[1])})
+            passengers.append({"passenger_type" : pax_array[0], "passenger_nb" : int(pax_array[1])})
         search['passengers'] = passengers
         
         # countries
@@ -180,13 +186,19 @@ def group_and_decorate(recos_in, rates):
         search["OnD"] = f"{search['origin_city']}-{search['destination_city']}"
         search["OnD_distance"] = round(get_neob().distance(search["origin_city"], search["destination_city"]))
 
-        # reco decoration
-        for reco in search["recos"]:
-            
+    except:
+        logger.exception("Failed at buidlding search from: %s" % recos[0])
+        # filter out recos when we fail at decorating them
+        return None
+
+    # reco decoration
+    for reco in search["recos"]:
+
+        try:
             # currency conversion
-            for amount in ["price", "taxes", "fees"]:
-                reco[amount] = float(reco[amount])
-                reco[amount + "_EUR"] = to_euros(reco[amount])
+            for field in ["price", "taxes", "fees"]:
+                reco[field] = float(reco[field])
+                reco[field + "_EUR"] = to_euros(reco[field])
 
             # will be computed from flights
             marketing_airlines = {}
@@ -209,36 +221,41 @@ def group_and_decorate(recos_in, rates):
             reco["main_marketing_airline"] = max(marketing_airlines, key=marketing_airlines.get)
             reco["main_operating_airline"] = max(operating_airlines, key=operating_airlines.get)
 
-
-    except:
-        logger.exception("Failed at grouping and decorating recos: %s" % recos_in)
-        # filter out recos when we fail at decorating them
-        return None
+        except:
+            logger.exception("Failed at decorating reco: %s" % reco)
+            # filter out recos when we fail at decorating them
+            return None
         
     return search
 
 
-### Encoders ###
+# Encoders
 # Different ways to print the output. You can easily add one.
 
 def encoder_json(reco):
-
     return json.dumps(reco)
 
 
 def encoder_pretty_json(reco):
-
     return json.dumps(reco, indent=2)
 
+
 # encoders list
-encoders = { "json" : encoder_json,
-             "pretty_json" : encoder_pretty_json,
-}
+encoders = {"json": encoder_json,
+            "pretty_json": encoder_pretty_json
+            }
 
 
-
-### Main function ###
+# Main function
 def process(args):
+    """
+    Main process: reads, decodes, groups into search and decorates
+    :param args: script arguments
+    :return searches: iterator on search objects (returned with yield)
+    """
+
+    # start time
+    start = time.time()
 
     # loading currency rates
     rates = load_rates(args.rates_file)
@@ -251,21 +268,23 @@ def process(args):
     # open input file (or stdin if there is none)
     with gzip.open(args.input_file, 'r') if args.input_file is not "-" else sys.stdin as f:
         for line in f:
-            #print(line, file=sys.stderr)
             cnt['reco_read'] += 1
             reco=decode_line(line)
             if reco:
-                cnt['reco_decoded'] +=1
+                cnt['reco_decoded'] += 1
                 # new search_id means new search: we can process the collected recos
                 if reco["search_id"] != current_search_id:
                     current_search_id = reco["search_id"]
                     if len(recos) > 0:
+                        if cnt['search_read'] % 1000 == 0:
+                            # log every 1000 searches to show the script is alive
+                            logger.info(f"Running: %s" % cnt)
                         cnt['search_read'] += 1
                         search = group_and_decorate(recos, rates)
                         if search:
                             cnt['search_encoded'] += 1
                             yield search
-                        recos=[]
+                        recos = []
                 recos.append(reco)
 
     # Let's not forget the last search
@@ -275,8 +294,11 @@ def process(args):
         if search:
             cnt['search_encoded'] += 1
             yield search
-    
-    logger.info(f"Finished with %s" % cnt)
+
+    # end time
+    end = time.time()
+
+    logger.info(f"Finished in {end - start} seconds: %s" % cnt)
  
 
 if __name__ == "__main__":
@@ -284,16 +306,15 @@ if __name__ == "__main__":
     # default rates file
     def_rates_file = os.path.join(os.path.dirname(__file__), "etc/eurofxref.csv")
     
-    logger.info("Parsing arguments")
     parser = argparse.ArgumentParser(description="Travel data reader")
-    parser.add_argument("input_file", help="Data file to read", nargs='?', default="-")
+    parser.add_argument("input_file", help="Data file to read (gziped csv file)", nargs='?', default="-")
     parser.add_argument("-f", "--format", help="Desired output format. Default is json.", choices=encoders.keys(), default="json")
     parser.add_argument("-r", "--rates_file", help=f"Data file with currency rates. Default is {def_rates_file}", default=def_rates_file)
-    args = parser.parse_args()
+    arguments = parser.parse_args()
 
-    encoder = encoders[args.format]
+    encoder = encoders[arguments.format]
 
-    for search in process(args):
+    for _search in process(arguments):
         # encode and print
-        print(encoder(search))
+        print(encoder(_search))
 
