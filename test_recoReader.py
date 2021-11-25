@@ -13,7 +13,7 @@ from recoReader import (
     process
 )
 
-csv_filename = os.path.join(os.path.dirname(__file__), "test/search_example.csv.gz")
+csv_filename = os.path.join(os.path.dirname(__file__), "test/travel_data_example.csv.gz")
 rates_file = os.path.join(os.path.dirname(__file__), "etc/eurofxref.csv")
 rate_RUB = 82.8124
 

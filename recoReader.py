@@ -232,17 +232,22 @@ def group_and_decorate(recos_in, rates):
 # Encoders
 # Different ways to print the output. You can easily add one.
 
-def encoder_json(reco):
-    return json.dumps(reco)
+def encoder_json(search):
+    return json.dumps(search)
 
 
-def encoder_pretty_json(reco):
-    return json.dumps(reco, indent=2)
+def encoder_pretty_json(search):
+    return json.dumps(search, indent=2)
+
+
+def encoder_test(search):
+    return search["currency"]
 
 
 # encoders list
 encoders = {"json": encoder_json,
-            "pretty_json": encoder_pretty_json
+            "pretty_json": encoder_pretty_json,
+            "test": encoder_test
             }
 
 
@@ -298,7 +303,7 @@ def process(args):
     # end time
     end = time.time()
 
-    logger.info(f"Finished in {end - start} seconds: %s" % cnt)
+    logger.info(f"Finished in {round(end - start, 2)} seconds: %s" % cnt)
  
 
 if __name__ == "__main__":
