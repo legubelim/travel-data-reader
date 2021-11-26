@@ -54,6 +54,7 @@ def test_process():
     assert reco["flown_distance"] == 3714
     assert reco["main_marketing_airline"] == "KL"
     assert reco["main_operating_airline"] == "KL"
+    assert reco["main_cabin"] == "M"
 
     # look at first flight
     flight = reco["flights"][0]

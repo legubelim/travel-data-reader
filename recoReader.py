@@ -203,6 +203,7 @@ def group_and_decorate(recos_in, rates):
             # will be computed from flights
             marketing_airlines = {}
             operating_airlines = {}
+            cabins = {}
             reco['flown_distance'] = 0
 
             # flight decoration
@@ -214,12 +215,15 @@ def group_and_decorate(recos_in, rates):
                 f["distance"] = round(get_neob().distance(f["dep_airport"], f["arr_airport"]))
                 reco['flown_distance'] += f["distance"]
                 marketing_airlines[f["marketing_airline"]] = marketing_airlines.get(f["marketing_airline"], 0) + f["distance"]
-                if f["operating_airline"] == "": f["operating_airline"] = f["marketing_airline"]
+                if f["operating_airline"] == "":
+                    f["operating_airline"] = f["marketing_airline"]
                 operating_airlines[f["operating_airline"]] = operating_airlines.get(f["operating_airline"], 0) + f["distance"]
+                cabins[f["cabin"]] = cabins.get(f["cabin"], 0) + f["distance"]
 
             # the main airline is the one that covers the longuest part of the trip
             reco["main_marketing_airline"] = max(marketing_airlines, key=marketing_airlines.get)
             reco["main_operating_airline"] = max(operating_airlines, key=operating_airlines.get)
+            reco["main_cabin"] = max(cabins, key=cabins.get)
 
         except:
             logger.exception("Failed at decorating reco: %s" % reco)
