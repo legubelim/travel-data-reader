@@ -54,7 +54,7 @@ optional arguments:
 Example:
 ```bash
 source .env/bin/activate
-./recoReader.py test/search_example.csv.gz
+./recoReader.py test/travel_data_example.csv.gz
 ```
 
 CSV Raw Data
@@ -97,7 +97,7 @@ The next fields are then repeated for each flight:
 | flight_nb         | flight number that identifies the flight for the marketing airline | E.g. 123 (for the flight IB123)
 | cabin             | cabin in the plane                          | M for Eco, C for Business, F for First, W for Eco+...
 
-There is a sample with recommendations from 2 searches in `test/search_example.csv`
+There is a sample with recommendations from 2 searches in `test/travel_data_example.csv`
 
 
 Decoration
@@ -138,5 +138,5 @@ At **flight** level:
 | arr_city |  arrival city   | 3-letter code. E.g. AMS
 | distance |  distance between departure and destination airports in km | E.g. 398
 
-The json generated based on `test/search_example.csv` is to be found in `search_example1.json` and `search_example2.json`
+The json generated based on `test/travel_data_example.csv` is to be found in `test/search_example1.json` and `test/search_example2.json`
 
