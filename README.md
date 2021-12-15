@@ -6,7 +6,7 @@ Our raw data are travel recommendations returned to real user searches.
 This Python script aims at
 * decoding CSV travel recommendations
 * grouping them: all recommendations returned by the same search have the same Search ID
-* decorating them with additional fields, especially regarding geography (countries, distance) and currency (conversion to Euros)
+* decorating them with additional fields, especially regarding dates (advance purchase, stay duration), geography (countries, distances, airline covering most of the trip...) and currency (conversion to Euros)
 * encode them in json
 
 Installation
@@ -108,7 +108,7 @@ At **search** level:
 
 | Name                | Description                                   | Value examples/format                             |
 | ------------------- | --------------------------------------------- | ------------------------------------------------- |
-| advance_purchase    | number of days between search date and departure date. I.e. how long in advance the search was done | E.g. 176
+| advance_purchase    | number of days between search date and departure date (also named "days to departure"). I.e. how long in advance the search was done | E.g. 176
 | stay_duration       | number of days spent at destination           | E.g. 7 (-1 for One Way trips)
 | trip_type           | trip type                                     | OW for One Way, RT for Round Trip
 | passengers          | arrays of passenger type and passenger number | E.g. [{"passenger_type":"ADT","passenger_nb":1},{"passenger_type":"CH","passenger_nb":2}]
@@ -140,3 +140,11 @@ At **flight** level:
 
 The json generated based on `test/travel_data_example.csv` is to be found in `test/search_example1.json` and `test/search_example2.json`
 
+
+#### Currency rates
+
+Currency rates are stored in a file etc/euroxref.csv as retrieved from ECB web site https://www.ecb.europa.eu/stats/eurofxref/eurofxref.zip
+
+#### Geographic data
+
+All geography related data are retrieved from the NeoBase open-source Python module: https://github.com/alexprengere/neobase.git 
